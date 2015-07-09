@@ -511,6 +511,11 @@ h5.title, h4.title {
 .adv {
   padding: 5px;
 }
+
+.chart {
+  margin: 5px 0;
+}
+
 /* Mobile rules. */
 
 @media only screen and (max-width: 992px) {

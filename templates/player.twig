@@ -15,19 +15,31 @@
       // draws it.
       function drawCharts() {
 
+        var options = {
+          'vAxis': { 'direction': 1},
+          'backgroundColor': {
+            'stroke': '#222222',
+            'strokeWidth': 3,
+            'fill': '#999999'
+          },
+          'titleTextStyle': {
+            'fontName': 'Press Start K'
+          },
+          'colors': ['#bb2222'],
+        };
+
         // Create the data table.
         var ranks = new google.visualization.DataTable();
         ranks.addColumn('string', 'Date');
         ranks.addColumn('number', 'Rank');
         ranks.addRows([
           {% for score in scores_graph %}
-            ['{{ score.raw.date }}', {{ score.rank }}],
+            ['{{ score.raw.date }}',{{ score.rank }}],
           {% endfor %}
-        ])
+        ]);
 
         // Set chart options
-        var options = {'title':'{{ player.name }}\'s rank',
-                       'vAxis': { 'direction': -1}};
+        options['title'] = '{{ player.name }}\'s rank';
 
         // Instantiate and draw our chart, passing in some options.
         var rank_chart = new google.visualization.LineChart(document.getElementById('rank_chart'));
@@ -37,16 +49,22 @@
         scores.addColumn('string', 'Date');
         scores.addColumn('number', 'Score');
         scores.addRows([
-          {% for score in scores_graph %}
-            [ '{{ score.raw.date }}', {{ score.score }} ],
+          {% for present in scores_graph %}
+          {% if (not loop.first) and (not loop.last) %}
+            {% set past = scores_graph[loop.index0-1] %}
+            {% set future = scores_graph[loop.index0+1] %}
+            [
+              '{{ past.raw.date }} - {{ future.raw.date }}',
+              {{ (present.score + past.score + future.score)/3 }}
+            ],
+          {% endif %}
           {% endfor %}
         ]);
 
-        var opt2 = {'title':'{{ player.name }}\'s score',
-                    'vAxis': { 'direction': 1}};
+        options['title'] = '{{ player.name }}\'s score';
 
         var score_chart = new google.visualization.LineChart(document.getElementById('score_chart'));
-        score_chart.draw(scores, opt2);
+        score_chart.draw(scores, options);
 
       }
 </script>
@@ -107,8 +125,8 @@
           <h3 class="profile-subtitle stroke">Score Charts</h3>
           <h5 class="profile-subtitle stroke">All of your dailies collated into a graph</h5>
           <div class="charts">
-            <div id="rank_chart"></div>
-            <div id="score_chart"></div>
+            <div id="rank_chart" class="chart"></div>
+            <div id="score_chart" class="chart"></div>
           </div>
 
           <h3 class="profile-subtitle stroke">Score history</h3>
