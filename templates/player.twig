@@ -1,4 +1,4 @@
-{% extends "default.php" %}
+{% extends "default.twig" %}
 
 {% block head %}
 <!--Load the chart API-->
@@ -8,30 +8,46 @@
       google.load('visualization', '1.0', {'packages':['corechart']});
 
       // Set a callback to run when the Google Visualization API is loaded.
-      google.setOnLoadCallback(drawChart);
+      google.setOnLoadCallback(drawCharts);
 
       // Callback that creates and populates a data table,
       // instantiates the pie chart, passes in the data and
       // draws it.
-      function drawChart() {
+      function drawCharts() {
 
         // Create the data table.
-        var data = new google.visualization.DataTable();
-        data.addColumn('string', 'Date');
-        data.addColumn('number', 'Rank');
-        data.addRows([
+        var ranks = new google.visualization.DataTable();
+        ranks.addColumn('string', 'Date');
+        ranks.addColumn('number', 'Rank');
+        ranks.addRows([
           {% for score in scores_graph %}
             ['{{ score.raw.date }}', {{ score.rank }}],
           {% endfor %}
-        ]);
+        ])
 
         // Set chart options
         var options = {'title':'{{ player.name }}\'s rank',
                        'vAxis': { 'direction': -1}};
 
         // Instantiate and draw our chart, passing in some options.
-        var chart = new google.visualization.LineChart(document.getElementById('chart'));
-        chart.draw(data, options);
+        var rank_chart = new google.visualization.LineChart(document.getElementById('rank_chart'));
+        rank_chart.draw(ranks, options);
+
+        var scores = new google.visualization.DataTable();
+        scores.addColumn('string', 'Date');
+        scores.addColumn('number', 'Score');
+        scores.addRows([
+          {% for score in scores_graph %}
+            [ '{{ score.raw.date }}', {{ score.score }} ],
+          {% endfor %}
+        ]);
+
+        var opt2 = {'title':'{{ player.name }}\'s score',
+                    'vAxis': { 'direction': 1}};
+
+        var score_chart = new google.visualization.LineChart(document.getElementById('score_chart'));
+        score_chart.draw(scores, opt2);
+
       }
 </script>
 
@@ -87,6 +103,14 @@
               {% endfor %}
             </tbody>
           </table>
+
+          <h3 class="profile-subtitle stroke">Score Charts</h3>
+          <h5 class="profile-subtitle stroke">All of your dailies collated into a graph</h5>
+          <div class="charts">
+            <div id="rank_chart"></div>
+            <div id="score_chart"></div>
+          </div>
+
           <h3 class="profile-subtitle stroke">Score history</h3>
           <h5 class="profile-subtitle stroke">Latest runs and scores - Click on a score to view details!</h5>
           <table class="table table-responsive table-hover">

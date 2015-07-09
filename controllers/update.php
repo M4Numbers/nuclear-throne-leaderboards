@@ -1,6 +1,6 @@
 <?php
 function render($twig, $sdata) {
-	echo $twig->render('404.php', $sdata);
+	echo $twig->render('404.twig', $sdata);
 }
 
 

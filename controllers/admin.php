@@ -7,7 +7,7 @@ function render($twig, $sdata = array()) {
 				hide_score($_GET["hash"]);
 				header("Location: /player/" . $_GET["player"]);
 			} else {
-				echo $twig->render("404.php", $sdata);
+				echo $twig->render("404.twig", $sdata);
 			}
 		}
 		if ($_GET["act"] == "show" && isset($_GET["hash"])) {
@@ -15,7 +15,7 @@ function render($twig, $sdata = array()) {
 				hide_score($_GET["hash"], 0);
 				header("Location: /player/" . $_GET["player"]);
 			} else {
-				echo $twig->render("404.php", $sdata);
+				echo $twig->render("404.twig", $sdata);
 			}
 		}
 		if ($_GET["act"] == "mark" && isset($_GET["player"])) {
@@ -23,7 +23,7 @@ function render($twig, $sdata = array()) {
 				mark_hacker($_GET["player"]);
 				header("Location: /player/" . $_GET["player"]);
 			} else {
-				echo $twig->render("404.php", $sdata);
+				echo $twig->render("404.twig", $sdata);
 			}
 		}
 		if ($_GET["act"] == "unmark" && isset($_GET["player"])) {
@@ -31,7 +31,7 @@ function render($twig, $sdata = array()) {
 				mark_hacker($_GET["player"], 0);
 				header("Location: /player/" . $_GET["player"]);
 			} else {
-				echo $twig->render("404.php", $sdata);
+				echo $twig->render("404.twig", $sdata);
 			}
 		}
 		if ($_GET["act"] == "update" && isset($_GET["player"])) {
@@ -39,11 +39,11 @@ function render($twig, $sdata = array()) {
 				update_profile($_GET["player"]);
 				header("Location: /player/" . $_GET["player"]);
 			} else {
-				echo $twig->render("404.php", $sdata);
+				echo $twig->render("404.twig", $sdata);
 			}
 		}
 	} else {
-		echo $twig->render("404.php", $sdata);
+		echo $twig->render("404.twig", $sdata);
 	}
 }
 

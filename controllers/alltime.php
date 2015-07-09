@@ -23,9 +23,9 @@ function render($twig, $sdata = array()) {
 	}
 	$data = array("location" => "alltime", "scores" => $leaderboard->create_alltime($page * 30, 30, $sort, "DESC"), "sort_by" => $_GET["sort"], "page" => $page);
 	if ($data != false) {
-		echo $twig->render('alltime.php', array_merge($sdata, $data));
+		echo $twig->render('alltime.twig', array_merge($sdata, $data));
 	} else {
-		echo $twig->render('404.php', $sdata);
+		echo $twig->render('404.twig', $sdata);
 	}
 }
 

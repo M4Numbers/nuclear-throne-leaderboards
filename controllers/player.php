@@ -5,7 +5,7 @@ function render($twig, $sdata = array()) {
 		$player = new Player(array("search"=>$_GET["steamid"]));
 
 		if ($player->steamid == false) {
-			echo $twig->render("404.php", $sdata);
+			echo $twig->render("404.twig", $sdata);
 			return;
 		}
 		// Scoreboards
@@ -38,12 +38,12 @@ function render($twig, $sdata = array()) {
 			"scores_graph" => array_reverse($scoreboard->to_array(0, 30)));
 
 		if ($data != false) {
-			echo $twig->render('player.php', array_merge($sdata, $data));
+			echo $twig->render('player.twig', array_merge($sdata, $data));
 		} else {
-			echo $twig->render('404.php', $sdata);
+			echo $twig->render('404.twig', $sdata);
 		}
 	} else {
-		echo $twig->render('404.php', $sdata);
+		echo $twig->render('404.twig', $sdata);
 	}
 }
 

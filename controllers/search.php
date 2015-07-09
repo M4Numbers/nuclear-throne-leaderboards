@@ -8,7 +8,7 @@ function render($twig, $sdata = array()) {
   } else {
     $data = array("results" => $results, "count" => count($results), "query" => $_GET["q"]);
   }
-  echo $twig->render('search.php', array_merge($sdata, $data));
+  echo $twig->render('search.twig', array_merge($sdata, $data));
 }
 
 ?>

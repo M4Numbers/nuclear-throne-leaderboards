@@ -23,7 +23,7 @@ function render($twig, $sdata = array()) {
 	        	'scores' => $scores,
 	        	'page' => $page
 	    	);
-			echo $twig->render('archive.php', array_merge($sdata, $data));
+			echo $twig->render('archive.twig', array_merge($sdata, $data));
 		} catch (Exception $e) {
 			render_yesterday($twig, $sdata);
 		}
@@ -52,7 +52,7 @@ function render_yesterday($twig, $sdata = array()) {
 	    'scores' => $scores,
 	    'page' => $page
 	);
-	echo $twig->render('archive.php', array_merge($sdata, $data));
+	echo $twig->render('archive.twig', array_merge($sdata, $data));
 }
 
 function json($sdata) {

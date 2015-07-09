@@ -120,7 +120,7 @@ if (isset($_GET['do'])) {
     // see if the page requested is in the controllers list
     if (array_search($_GET['do'], $controller_list) === false) {
         // if not, output 404
-        echo $twig->render('404.php');
+        echo $twig->render('404.twig');
     } else {
         // Include the controller for the requested file
         include "controllers/" . $_GET["do"] . ".php";

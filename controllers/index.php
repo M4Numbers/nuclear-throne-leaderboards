@@ -45,7 +45,7 @@ function render($twig, $sdata = array()) {
         'global' => $global,
         'page' => $page + 1
     );
- 	echo $twig->render('index.php', array_merge($sdata, $data));
+ 	echo $twig->render('index.twig', array_merge($sdata, $data));
  }
 
 function json($sdata) {
