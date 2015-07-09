@@ -1,6 +1,6 @@
 <?php
 require("config.php");
-require("codebird.php");
+//require("codebird.php");
 
 function get_data($url) {
 	$ch = curl_init();
@@ -23,7 +23,7 @@ date_default_timezone_set("UTC");
 // This function will pull the latest leaderboard data from Steam and update the
 // data for that day's daily in the database for caching purposes.
 function update_leaderboard($leaderboardId = "") {
-  global $db_username, $db_password, $twitter_settings, $steam_apikey;
+  global $db_username, $db_password, $db_location, $db_name, $twitter_settings, $steam_apikey;
 
   if ($leaderboardId === "") {
     // Fetch the XML file for Nuclear Throne.
@@ -83,7 +83,10 @@ function update_leaderboard($leaderboardId = "") {
   $xmlLeaderboard = new SimpleXMLElement($xmlLeaderboardData);
 
   // Connect to the database.
-  $db = new PDO('mysql:host=localhost;dbname=throne;charset=utf8', $db_username, $db_password, array(PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
+  $db = new PDO(sprintf('mysql:host=%s;dbname=%s;charset=utf8', $db_location, $db_name),
+      $db_username, $db_password,
+      array(PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION)
+  );
 
   // Purge scores from today so that there are no rank collisions.
   // $stmt = $db->prepare("DELETE FROM throne_scores WHERE dayId = ?;");
@@ -129,7 +132,7 @@ function update_leaderboard($leaderboardId = "") {
     $db->beginTransaction();
 
     foreach ($scores as $score) {
-      if ($rank == 1) {
+    /*  if ($rank == 1) {
         if ($score["steamID"] != file_get_contents("first.txt") && $score["score"] > 300) {
           $file = fopen("first.txt", "w");
           fwrite($file, $score["steamID"]);
@@ -150,7 +153,7 @@ function update_leaderboard($leaderboardId = "") {
           $reply = $cb->statuses_update($params);
         }
 
-      }
+      }*/
       if (array_search($score['steamID'], $banned) === false) {
         // Prepare the SQL statement
         $stmt = $db->prepare("INSERT INTO throne_scores(hash, dayId, steamId, score, rank, first_created) VALUES(:hash, :dayId,:steamID,:score,:rank,NOW()) ON DUPLICATE KEY UPDATE rank=VALUES(rank), score=VALUES(score);");
@@ -178,8 +181,11 @@ function update_leaderboard($leaderboardId = "") {
   echo "Finished updating today's leaderboards.\n";
 }
 function update_steam_profiles() {
-  global $db_username, $db_password, $steam_apikey;
-  $db = new PDO('mysql:host=localhost;dbname=throne;charset=utf8', $db_username, $db_password, array(PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
+  global $db_username, $db_password, $db_location, $db_name, $steam_apikey;
+  $db = new PDO(sprintf('mysql:host=%s;dbname=%s;charset=utf8', $db_location, $db_name),
+      $db_username, $db_password,
+      array(PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION)
+  );
   set_time_limit(0);
 
   // Check which steam ids are eligible for an update
@@ -191,7 +197,7 @@ function update_steam_profiles() {
   FROM throne_scores
   LEFT JOIN throne_players ON throne_scores.steamId = throne_players.steamid
   WHERE DATEDIFF(NOW(), throne_scores.last_updated) < 5
-  AND (DATEDIFF(NOW(), throne_players.last_updated) > 1
+  AND (DATEDIFF(NOW(), throne_players.last_updated) > 0
    OR throne_players.last_updated IS NULL);');
 
   $t = $result->rowCount();
@@ -238,12 +244,15 @@ function update_steam_profiles() {
 }
 
 function update_twitch() {
-  global $db_username, $db_password;
+  global $db_username, $db_password, $db_location, $db_name;
 
   $streamJson = get_data("https://api.twitch.tv/kraken/search/streams?limit=25&q=nuclear+throne");
   $streams = json_decode($streamJson, true);
 
-  $db = new PDO('mysql:host=localhost;dbname=throne;charset=utf8', $db_username, $db_password, array(PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
+  $db = new PDO(sprintf('mysql:host=%s;dbname=%s;charset=utf8', $db_location, $db_name),
+      $db_username, $db_password,
+      array(PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION)
+  );
   try {
     $db->beginTransaction();
 

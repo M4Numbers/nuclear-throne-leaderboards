@@ -11,7 +11,7 @@ function json($sdata) {
 				echo json_encode(array("error" => "You are not logged in."));
 				break;
 			}
-			$verify = "/^(https?\:\/\/)?w{3}?\.?(youtu|youtube|twitch)\.(com|be|tv)\/.*$/"
+			$verify = "/^(https?\:\/\/)?w{3}?\.?(youtu|youtube|twitch)\.(com|be|tv)\/.*$/";
 			if (preg_match($verify, $_POST["video"]) === false) {
 				echo json_encode(array("error" => "Bad link."));
 				break;

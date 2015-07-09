@@ -21,7 +21,7 @@ $('#updateScoreBtn').click(function(event) {
          hash: score,
          video: video,
          comment: comment
-      }
+      },
       success: function(data) {
          parsed = JSON.parse(data);
          if (!parsed.error) {

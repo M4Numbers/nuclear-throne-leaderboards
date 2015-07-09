@@ -1,7 +1,7 @@
 $('#do_search').click(function(event) {
   window.location = '/search/' + $('#search').val();
   event.preventDefault();
-})
+});
 
 $('#save-twitch').click(function(event) {
    event.preventDefault();

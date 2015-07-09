@@ -11,7 +11,7 @@ $start = $time;
 
 require "config.php";
 
-if ($config_development == true) {
+if ($config_development == true && !isset($_GET['supress'])) {
     // enable development options
     error_reporting(E_ALL);
     ini_set('display_errors', 'On');

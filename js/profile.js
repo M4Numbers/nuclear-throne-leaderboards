@@ -15,7 +15,7 @@ $('#nextPageBtn').click(function(event) {
    done = false;
 
    $.ajax({
-      url: "/index.php?do=player&steamid=" + steamid + "&page=" + (page + 1) + "&json",
+      url: "/index.php?do=player&steamid=" + steamid + "&page=" + (page + 1) + "&json&supress",
       success: function(data) {
          parsed = JSON.parse(data)[0];
          $('#nextPageBtn').html('Older scores');

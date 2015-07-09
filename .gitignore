@@ -57,3 +57,5 @@ composer.phar
 cache/
 
 downloads/
+
+.idea/

@@ -99,8 +99,8 @@
 						 "avatar_medium"		=> $this->avatar_medium,
 						 "suspected_hacker"		=> $this->suspected_hacker,
 						 "admin"				=> $this->admin,
-						"rank"					=> $this->rank,
-						"twitch"					=> $this->twitch,
+						 "rank"					=> $this->rank,
+						 "twitch"				=> $this->twitch,
 						 "raw" 					=> $this->raw);
 		}
 	}
