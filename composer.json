@@ -1,7 +1,7 @@
 {
-    "require": {
-        "twig/twig": "~1.0",
-	"lightopenid/lightopenid": "dev-master",
-	"erusev/parsedown": "dev-master"
-    }
+  "require": {
+    "twig/twig": "~1.0",
+    "lightopenid/lightopenid": "dev-master",
+    "erusev/parsedown": "dev-master"
+  }
 }
