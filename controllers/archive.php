@@ -24,8 +24,6 @@ function render(Twig_Environment $twig, $sdata = array()) {
         $page = 0;
     }
 
-    $data = array();
-
     //If a specific date has been set...
     if (isset($_GET["date"])) {
         try {

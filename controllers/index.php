@@ -42,7 +42,7 @@ function render(Twig_Environment $twig, $sdata = array()) {
         $user = new Player(array("search" => $_SESSION["steamid"]));
         $userdata = $user->to_array();
         $userdata["today_rank"] = $user->get_rank_today();
-        if ($userdata["today_rank"] == "")
+        if ($userdata["today_rank"] == -1)
             $userdata["today_rank"] = "N/A";
         $userdata["rank"] = $user->get_rank();
         $userdata["percentile"] = round($userdata["today_rank"] / $global["runcount"] * 100, 2);

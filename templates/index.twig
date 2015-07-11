@@ -171,7 +171,7 @@
             </div>
             <div class="col-md-12 user-today">
               <h4>Today's performance:</h4>
-              {% if userdata.today_rank != "N/A" %}
+              {% if userdata.today_rank > 0 %}
                 <p>Rank: #{{ userdata.today_rank }}<br/>
                 Percentile: {{ userdata.percentile }}%</p>
               {% else %}
