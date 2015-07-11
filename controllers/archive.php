@@ -24,6 +24,9 @@ function render(Twig_Environment $twig, $sdata = array()) {
         $page = 0;
     }
 
+    $data = array();
+    $ptr = &$data;
+
     //If a specific date has been set...
     if (isset($_GET["date"])) {
         try {
@@ -33,7 +36,7 @@ function render(Twig_Environment $twig, $sdata = array()) {
             //Then construct the leaderboard for that day
             $leaderboard = new Leaderboard();
             $scores = $leaderboard->create_global($_GET["date"], "rank", "ASC", ($page - 1) * 30, 30)->to_array();
-            $data = array(
+            $ptr = array(
                 'location' => "archive",
                 'global' => $leaderboard->global_stats,
                 'year' => $date->format("Y"),
@@ -45,15 +48,16 @@ function render(Twig_Environment $twig, $sdata = array()) {
             );
         } catch (Exception $e) {
             //Since they provided an invalid date, default to yesterday
-            $data = render_yesterday();
+            $ptr = render_yesterday();
         }
     } else {
         //Default to yesterday
-        $data = render_yesterday();
+        $ptr = render_yesterday();
     }
 
     //Now render the final product
-    $twig->render('archive.twig', array_merge($sdata, $data));
+    echo $twig->render('archive.twig', array_merge($sdata, $data));
+
 }
 
 /**
@@ -72,7 +76,9 @@ function render_yesterday() {
 
     //Generate the leaderboard for yesterday (1 day's offset from today)
     $leaderboard = new Leaderboard();
+
     $scores = $leaderboard->create_global(1, "rank", "ASC", ($page - 1) * 30, 30)->to_array();
+
     $date = new DateTime($leaderboard->date);
     $data = array(
         'location' => "archive",

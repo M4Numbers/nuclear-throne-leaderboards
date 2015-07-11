@@ -204,7 +204,7 @@ function update_leaderboard($leaderboardId = -1) {
         )
     ) as $row) {
         //Add then to the list of banned people for today
-        $banned[] = $row['steamid'];
+        $banned[] = $row['steamId'];
         echo("[DEBUG] Hiding scores by " . $row['steamid'] . " today.\n");
     }
 
