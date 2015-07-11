@@ -1,3 +1,11 @@
+/**
+  This is an auto-generated file from mysqldump. There are some items which
+  may be hard to see through, and there is a lot of additional information
+  which was included as part of the dump.
+
+  Please take that into account when reviewing this file.
+**/
+
 -- phpMyAdmin SQL Dump
 -- version 4.4.11
 -- http://www.phpmyadmin.net
@@ -31,7 +39,7 @@ CREATE TABLE IF NOT EXISTS `throne_alltime` (
   `score` int(10) unsigned NOT NULL,
   `average` int(11) NOT NULL,
   `runs` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Table structure for table `throne_dates`
@@ -79,7 +87,7 @@ CREATE TABLE IF NOT EXISTS `throne_tokens` (
   `token` varchar(255) NOT NULL,
   `user_id` bigint(20) unsigned NOT NULL,
   `last_accessed` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Indexes for dumped tables

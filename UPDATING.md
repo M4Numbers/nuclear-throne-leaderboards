@@ -21,7 +21,7 @@ of the improvements will be a mass commenting of the codebase (sarcasm and cutti
 optional and also expected), which will mean that the majority of the code is legible and any programmer
 will be able to look at an area of the code and know exactly what it does.
 
-**This stage is currently: In Progress**
+**This stage is currently: Completed**
 
 ## Improving
 
@@ -36,7 +36,7 @@ also be noted that after (or during) this stage, another round of commenting wil
 new and improved code. In addition, further stylistic changes will take place during this stage as,
 during the previous two stages, very little of the code should have been worked on.
 
-**This stage is currently: To Be Completed**
+**This stage is currently: In Progress**
 
 ## Testing
 
