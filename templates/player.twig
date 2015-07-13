@@ -52,7 +52,7 @@
         ]);
 
         // Set chart options
-        options['title'] = '{{ player.name }}\'s rank';
+        options['title'] = '{{ player.name }}\'s Rank';
 
         // Instantiate and draw our chart, passing in some options.
         var rank_chart = new google.visualization.LineChart(document.getElementById('rank_chart'));
@@ -80,7 +80,7 @@
           {% endfor %}
         ]);
 
-        options['title'] = '{{ player.name }}\'s 3-day average score';
+        options['title'] = '{{ player.name }}\'s Score';
 
         //var score_chart = new google.charts.Line(document.getElementById('score_chart'));
         var score_chart = new google.visualization.LineChart(document.getElementById('score_chart'));
