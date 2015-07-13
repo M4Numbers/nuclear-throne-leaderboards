@@ -5,7 +5,7 @@
 <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 <script type="text/javascript">
       // Load the Visualization API and the piechart package.
-      google.load('visualization', '1.0', {'packages':['corechart']});
+      google.load('visualization', '1.0', {'packages':['corechart', 'line']});
 
       // Set a callback to run when the Google Visualization API is loaded.
       google.setOnLoadCallback(drawCharts);
@@ -25,16 +25,29 @@
           'titleTextStyle': {
             'fontName': 'Press Start K'
           },
-          'colors': ['#bb2222'],
+          'colors': ['#bb2222', '#2222bb'],
         };
 
         // Create the data table.
         var ranks = new google.visualization.DataTable();
         ranks.addColumn('string', 'Date');
         ranks.addColumn('number', 'Rank');
+        ranks.addColumn('number', '3-Day Average')
         ranks.addRows([
-          {% for score in scores_graph %}
-            ['{{ score.raw.date }}',{{ score.rank }}],
+          {% for present in scores_graph %}
+          {% if (loop.first) or (loop.last) %}
+          [
+            '{{ present.raw.date }}', {{ present.rank }}, null
+          ],
+          {% else %}
+          {% set past = scores_graph[loop.index0-1] %}
+          {% set future = scores_graph[loop.index0+1] %}
+          [
+            '{{ past.raw.date }} - {{ future.raw.date }}',
+            {{ present.rank }},
+            {{ (present.rank + past.rank + future.rank)/3 }}
+          ],
+          {% endif %}
           {% endfor %}
         ]);
 
@@ -48,21 +61,28 @@
         var scores = new google.visualization.DataTable();
         scores.addColumn('string', 'Date');
         scores.addColumn('number', 'Score');
+        scores.addColumn('number', '3-Day Average');
         scores.addRows([
           {% for present in scores_graph %}
-          {% if (not loop.first) and (not loop.last) %}
+          {% if (loop.first) or (loop.last) %}
+            [
+              '{{ present.raw.date }}', {{ present.score }}, null
+            ],
+          {% else %}
             {% set past = scores_graph[loop.index0-1] %}
             {% set future = scores_graph[loop.index0+1] %}
             [
               '{{ past.raw.date }} - {{ future.raw.date }}',
+              {{ present.score }},
               {{ (present.score + past.score + future.score)/3 }}
             ],
           {% endif %}
           {% endfor %}
         ]);
 
-        options['title'] = '{{ player.name }}\'s score';
+        options['title'] = '{{ player.name }}\'s 3-day average score';
 
+        //var score_chart = new google.charts.Line(document.getElementById('score_chart'));
         var score_chart = new google.visualization.LineChart(document.getElementById('score_chart'));
         score_chart.draw(scores, options);
 

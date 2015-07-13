@@ -288,8 +288,8 @@ class Leaderboard {
                 LEFT JOIN (
                     SELECT dayId AS d, COUNT(*) AS runs FROM throne_scores
                     GROUP BY dayId) x ON x.d = throne_scores.dayId
-                WHERE {$where} = :cnd
-                {$date_query}
+                WHERE `{$where}` = :cnd
+                $date_query
                 ORDER BY `{$order_by}` {$direction} {$limit}"
             );
 

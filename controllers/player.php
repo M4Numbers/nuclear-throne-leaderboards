@@ -59,6 +59,7 @@ function render(Twig_Environment $twig, $sdata = array()) {
             "best_moments" => $best_moments,
             "rank" => $player->get_rank(),
             "total" => $scoreboard->get_global_stats(),
+            //"scores_graph" => array_reverse($scoreboard->to_array(0, -1)));
             "scores_graph" => array_reverse($scoreboard->to_array(0, 30)));
 
         //And render it accordingly.
