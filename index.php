@@ -42,7 +42,7 @@ foreach (glob("models/*.php") as $filename) {
     include $filename;
 }
 
-Application::connect();
+$db = Application::getDatabase();
 
 session_start();
 
@@ -106,11 +106,11 @@ if (isset($_SESSION["steamid"])) {
 //
 // Remember to look suitably tearful over the reunion.
 if (isset($_COOKIE["authtoken"]) && !isset($_SESSION["steamid"])) {
-    $steamid_login = Application::check_login($_COOKIE["authtoken"]);
+    $steamid_login = $db->check_token($_COOKIE["authtoken"]);
 
     //Then again, let's just make sure that they're not sneaking an attempted login
     // beforehand.
-    if ($steamid_login != false) {
+    if ($steamid_login != "") {
         $_SESSION["steamid"] = $steamid_login;
         $url = sprintf(
             "http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
@@ -137,7 +137,7 @@ if (isset($_COOKIE["authtoken"]) && !isset($_SESSION["steamid"])) {
 // We do so by removing their token and nuking the session before sending
 // them to Steam's logout location (I think; don't quote me on that)
 if (isset($_GET["logout"])) {
-    Application::remove_token($_COOKIE["authtoken"]);
+    $db->remove_token($_COOKIE["authtoken"]);
     session_destroy();
     session_unset();
     header('Location: ' . $steam_callback);

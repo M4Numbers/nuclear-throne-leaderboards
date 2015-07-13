@@ -45,9 +45,10 @@ class CentralDatabase {
      *  to perform functions and statements on
      * @param string $prefix The prefix of all tables in the chosen
      *  database
+     * @param array $options A set of options for the PDO database
      * @throws Exception if constants were not defined.
      */
-    protected function __construct( $database, $prefix ) {
+    protected function __construct( $database, $prefix = "", $options = [] ) {
 
         //Now we actually do need to include
         // the configuration file for reasons
@@ -62,7 +63,7 @@ class CentralDatabase {
 
             //Create the database and set the associative fetch
             // array as default
-            $pdo_base = new PDO( $dsn, DATAUSER, DATAPASS );
+            $pdo_base = new PDO( $dsn, DATAUSER, DATAPASS, $options );
             $pdo_base->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
             $pdo_base->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 

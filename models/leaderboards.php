@@ -16,7 +16,7 @@ class Leaderboard {
     public $scores, $date, $global_stats;
 
     /**
-     * @var PDO $db
+     * @var ThroneBase $db
      */
     private $db;
 
@@ -24,7 +24,7 @@ class Leaderboard {
      * Ping the database application to get a copy of the connection
      */
     public function __construct() {
-        $this->db = Application::$db;
+        $this->db = Application::getDatabase();
     }
 
     /**
@@ -42,37 +42,8 @@ class Leaderboard {
      */
     public function create_alltime($start = 0, $size = 30, $order_by = "score", $direction = "DESC") {
 
-        //Two magic methods to reset a few magic variables we have stored somewhere in
-        // the database (though I'm not precisely sure where yet)
-        $this->db->query("SET @prev_value = NULL");
-        $this->db->query("SET @rank_count = 0");
-
-        //Note: May be worthwhile to make a Switch statement with the $order_by var in
-        // order to validate that the caller has, in fact, chosen a valid order option
-
-        //Yep... this is an SQL statement...
-        //
-        //... Yep.
-        $stmt = $this->db->prepare(
-            "SELECT  d.*, p.*, c.ranks, w.* FROM (
-              SELECT {$order_by}, @rank:=@rank+1 ranks FROM (
-                SELECT  DISTINCT {$order_by} FROM throne_alltime a
-                ORDER BY {$order_by} DESC
-              ) t, (SELECT @rank:= 0) r
-            ) c INNER JOIN throne_alltime d ON c.{$order_by} = d.{$order_by}
-              LEFT JOIN throne_players p ON p.steamid = d.steamid
-              LEFT JOIN (
-                (SELECT COUNT(*) as wins, steamid FROM throne_scores
-                 WHERE rank = 1 GROUP BY steamid) AS w
-              ) ON w.steamid = d.steamid
-            ORDER BY c.ranks ASC LIMIT :start, :size"
-        );
-
-        //Get all those entries that we asked for
-        $stmt->execute(array(":start" => $start, ":size" => $size));
-        $entries = $stmt->fetchAll();
-
-        return $entries;
+        $this->db->clear_magic_variables();
+        return $this->db->generate_alltime_leaderboard($order_by, $start, $size, $direction);
 
     }
 

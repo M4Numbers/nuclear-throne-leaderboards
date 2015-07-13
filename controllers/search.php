@@ -14,11 +14,13 @@
  */
 function render(Twig_Environment $twig, $sdata = array()) {
 
+    $db = Application::getDatabase();
+
     //Let's get ourselves the term that was actually searched
     $term = html_entity_decode($_GET["q"]);
 
     //And perform a bit of magic in order to search for said term
-    $results = Application::search_user($term);
+    $results = $db->search_user($term);
 
     //If we only found one result, we may as well just re-direct the
     // user straight to that profile
