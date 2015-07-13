@@ -90,6 +90,16 @@ CREATE TABLE IF NOT EXISTS `throne_tokens` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
+-- Test table for various tests
+--
+
+CREATE TABLE `throne_test` (
+  `foo` INTEGER,
+  `bar` VARCHAR(32) NOT NULL,
+  PRIMARY KEY(`foo`)
+);
+
+--
 -- Indexes for dumped tables
 --
 
