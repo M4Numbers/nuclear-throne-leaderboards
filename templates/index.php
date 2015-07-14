@@ -79,13 +79,6 @@
       </div>
     </div>
     <div class="col-md-4 sidebar">
-      <div class="sidebar-box">
-       <div class="row vault-floor adv">
-         <div class="col-md-12">
-         <b>Please help me support Thronebutt through the month.</b> <a href="/index.php?do=help">Click here to learn how you can help.</a>
-       </div>
-       </div>
-     </div>
     {% if session.steamid == "" %}
       <div class="modal fade login-modal" id="login-modal" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel" aria-hidden="true">
         <div class="modal-dialog">
