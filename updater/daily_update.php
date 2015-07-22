@@ -7,6 +7,7 @@
  */
 
 //We require ourselves a config file... Men!
+//TODO: Link in other files that are not currently linked due to file structure
 require "config.php";
 
 // I... um... no.
@@ -24,41 +25,12 @@ if (!isset($db_username)) {
 
 function update_alltime() {
 
-    //Some more duplication for your troubles, squire?
-    global $db_username, $db_password, $db_location, $db_name;
-
-    $db = new PDO(sprintf('mysql:host=%s;dbname=%s;charset=utf8', $db_location, $db_name),
-        $db_username, $db_password,
-        array(PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION)
-    );
-
     try {
-        //Let's actually adhere to transactional standards for a minute
-        $db->beginTransaction();
 
-        //And truncate the alltime table completely...
-        $db->query("TRUNCATE TABLE throne_alltime");
-
-        //... before rebuilding it back up from the ground
-        $db->query(
-            "INSERT INTO throne_alltime(steamid, score, average, runs)
-              SELECT throne_scores.steamId, SUM(score) as score,
-                AVG(score) as average, COUNT(score) AS runs
-              FROM `throne_scores`
-                LEFT JOIN throne_players ON throne_scores.steamId = throne_players.steamid
-              WHERE suspected_hacker = 0
-              GROUP BY throne_scores.steamId
-              ORDER BY score DESC"
-        );
-
-        //And, once that's done, commit all our changes to the database, meaning that
-        // the runtime of everything shouldn't be affected (probably)
-        $db->commit();
+        $db = Application::getDatabase();
+        $db->update_alltime_leaderboard();
 
     } catch (PDOException $ex) {
-        //If this fails, we have to immediately rollback all our changes so that nothing
-        // untoward happens to the database
-        $db->rollBack();
         echo $ex->getMessage();
     }
 

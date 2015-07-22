@@ -476,6 +476,32 @@ class ThroneBase extends CentralDatabase {
         }
     }
 
+    public function update_score($hash, $video, $comment) {
+
+        $sql = "UPDATE `throne_scores` SET
+                  `video` = :video,
+                  `comment` = :comment
+                WHERE `hash` = :hash";
+
+        $aov = array(
+            ":hash" => $hash,
+            ":video" => $video,
+            ":comment" => $comment,
+        );
+
+        try {
+
+            $res = parent::executePreparedStatement(
+                parent::makePreparedStatement($sql), $aov
+            );
+
+            return $res->rowCount() > 0;
+
+        } catch (PDOException $e) {
+            throw $e;
+        }
+    }
+
     /**
      * End Score Methods
      */
@@ -502,6 +528,65 @@ class ThroneBase extends CentralDatabase {
 
     /**
      * End Twitch Methods
+     */
+
+    /**
+     * Start Crontab Methods
+     */
+
+    public function update_alltime_leaderboard() {
+        try {
+
+            parent::beginTransaction();
+
+            $this->burn_alltime_leaderboards();
+            $this->add_new_alltime_scores();
+
+            parent::commitTransaction();
+
+        } catch (PDOException $e) {
+            parent::rollbackTransaction();
+            throw $e;
+        }
+    }
+
+    public function burn_alltime_leaderboards() {
+
+        $sql = "TRUNCATE TABLE `throne_alltime`";
+
+        try {
+
+            parent::executeStatement(parent::makePreparedStatement($sql));
+
+        } catch (PDOException $e) {
+            throw $e;
+        }
+
+    }
+
+    public function add_new_alltime_scores() {
+
+        $sql = "INSERT INTO throne_alltime(steamid, score, average, runs)
+                  SELECT throne_scores.steamId, SUM(score) as score,
+                    AVG(score) as average, COUNT(score) AS runs
+                  FROM `throne_scores`
+                    LEFT JOIN throne_players ON throne_scores.steamId = throne_players.steamid
+                  WHERE suspected_hacker = 0
+                  GROUP BY throne_scores.steamId
+                  ORDER BY score DESC";
+
+        try {
+
+            parent::executeStatement(parent::makePreparedStatement($sql));
+
+        } catch (PDOException $e) {
+            throw $e;
+        }
+
+    }
+
+    /**
+     * End Crontab Methods
      */
 
 }

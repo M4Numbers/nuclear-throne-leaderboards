@@ -57,14 +57,12 @@ function json($sdata) {
             /**
              * Let's get those details into the database!
              *
-             * @var PDO $db
+             * @var ThroneBase $db
              */
-            $db = Application::$db;
-            $stmt = $db->prepare("UPDATE `throne_scores` SET `video` = :video, `comment` = :comment WHERE `hash` = :hash");
-            $stmt->execute(array(":video" => $_POST["video"], "comment" => $_POST["comment"], ":hash" => $_POST["hash"]));
+            $db = Application::getDatabase();
 
             //If something went wrong, the rows altered will be 0, ergo, the update failed
-            if ($stmt->rowCount() < 1) {
+            if (!$db->update_score($_POST['hash'], $_POST['video'], $_POST['comment'])) {
                 echo json_encode(array("error" => "Update failed."));
                 break;
             }
