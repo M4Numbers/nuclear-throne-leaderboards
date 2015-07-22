@@ -41,8 +41,9 @@ date_default_timezone_set("UTC");
  * @param int $leaderboardId
  */
 function update_leaderboard($leaderboardId = -1) {
-    global $db_username, $db_password, $db_location, $db_name, $twitter_settings, $steam_apikey;
+    global $twitter_settings, $steam_apikey;
 
+    $db = Application::getDatabase();
     $leaderboardDate = 0;
 
     //If no leaderboard was provided, we're just going to assume that they want the latest
@@ -145,12 +146,6 @@ function update_leaderboard($leaderboardId = -1) {
     // Instance another SimpleXMLElement to read from it.
     $xmlLeaderboard = new SimpleXMLElement($xmlLeaderboardData);
 
-    // Connect to the database (in a separate instance again).
-    $db = new PDO(sprintf('mysql:host=%s;dbname=%s;charset=utf8', $db_location, $db_name),
-        $db_username, $db_password,
-        array(PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION)
-    );
-
     /* I assume this comment set and the statements therein are legacy instances, so I'll
      * leave them be for the time being
     // Purge scores from today so that there are no rank collisions.
@@ -159,11 +154,7 @@ function update_leaderboard($leaderboardId = -1) {
      */
     //If it's the first update of the day, we need to add in another day to the throne
     // tracker punch card thing
-    $stmt = $db->prepare("INSERT IGNORE INTO throne_dates(`dayId`, `date`) VALUES(:dayId, :day)");
-    $stmt->execute(array(
-        ':dayId' => $leaderboardId,
-        ':day' => $todayDate->format('Y-m-d')
-    ));
+    $db->insert_new_day($leaderboardId, $todayDate->format('Y-m-d'));
 
     $scores = array();
 
@@ -176,7 +167,13 @@ function update_leaderboard($leaderboardId = -1) {
             // and today's daily leaderboard ID.
             $hash = md5($leaderboardId . $entry->steamid);
             // We'll put all results into an array so that we can weed out the hackers.
-            $scores[] = array('hash' => $hash, 'dayId' => $leaderboardId, 'steamID' => $entry->steamid, 'score' => $entry->score, 'rank' => $entry->rank);
+            $scores[] = array(
+                'hash' => $hash,
+                'dayId' => $leaderboardId,
+                'steamID' => $entry->steamid,
+                'score' => $entry->score,
+                'rank' => $entry->rank
+            );
         }
 
     }
@@ -190,22 +187,16 @@ function update_leaderboard($leaderboardId = -1) {
     $banned = array();
 
     //For each person we've got as a suspected hacker...
-    foreach ($db->query(
-        "SELECT steamid FROM throne_players WHERE suspected_hacker = 1"
-    ) as $row) {
+    foreach ($db->find_hackers() as $hacker) {
         //Add them to the array of banned people
-        $banned[] = $row['steamid'];
+        $banned[] = $hacker['steamid'];
     }
 
     // get a list of hidden players for today
-    foreach ($db->query(
-        sprintf(
-            "SELECT steamId FROM throne_scores WHERE hidden = 1 AND dayId = %d", $leaderboardId
-        )
-    ) as $row) {
+    foreach ($db->find_hidden_players($leaderboardId) as $hidden) {
         //Add then to the list of banned people for today
-        $banned[] = $row['steamId'];
-        echo("[DEBUG] Hiding scores by " . $row['steamid'] . " today.\n");
+        $banned[] = $hidden['steamId'];
+        echo("[DEBUG] Hiding scores by " . $hidden['steamid'] . " today.\n");
     }
 
     //Mark the number one rank
@@ -446,50 +437,19 @@ function update_steam_profiles() {
  * right now
  */
 function update_twitch() {
-    global $db_username, $db_password, $db_location, $db_name;
-
     //Get some data from the twitch api in regards to who is currently streaming Nuclear
     // Throne (with a limit of 25 results)
     $streamJson = get_data("https://api.twitch.tv/kraken/search/streams?limit=25&q=nuclear+throne");
     $streams = json_decode($streamJson, true);
 
-    //One more database instantiation couldn't hurt, right? Wrong.
-    $db = new PDO(sprintf('mysql:host=%s;dbname=%s;charset=utf8', $db_location, $db_name),
-        $db_username, $db_password,
-        array(PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION)
-    );
+    $db = Application::getDatabase();
 
     try {
 
-        //Begin a transaction
-        $db->beginTransaction();
-
-        //And clear all previous streamers
-        $db->query("TRUNCATE TABLE throne_streams");
-
         //For each stream we have found, add it into the streaming table
-        foreach ($streams['streams'] as $stream) {
-
-            $stmt = $db->prepare(
-                "INSERT INTO throne_streams(name, status, viewers, preview)
-                VALUES(:name, :status, :viewers, :preview)"
-            );
-
-            $stmt->execute(array(
-                ":name" => $stream['channel']['name'],
-                ":status" => $stream['channel']['status'],
-                ":viewers" => $stream['viewers'],
-                ":preview" => str_replace("http://","https://", $stream['preview']['small'])
-            ));
-
-        }
-
-        //Commit all those changes
-        $db->commit();
+        $db->refresh_twitch_streams($streams['streams']);
 
     } catch (PDOException $ex) {
-        //Failsafe...
-        $db->rollBack();
         echo $ex->getMessage();
     }
 

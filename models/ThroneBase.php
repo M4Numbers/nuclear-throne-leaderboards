@@ -534,6 +534,99 @@ class ThroneBase extends CentralDatabase {
      * Start Crontab Methods
      */
 
+    public function refresh_twitch_streams($streams) {
+
+        $sql = "INSERT INTO throne_streams(name, status, viewers, preview)
+                VALUES(:name, :status, :viewers, :preview)";
+
+        $reset = "TRUNCATE TABLE throne_streams";
+
+        try {
+
+            parent::beginTransaction();
+
+            parent::executeStatement(parent::makePreparedStatement($reset));
+
+            //For each stream we have found, add it into the streaming table
+            foreach ($streams as $stream) {
+
+                parent::executePreparedStatement(
+                    parent::makePreparedStatement($sql),
+                    array(
+                        ":name" => $stream['channel']['name'],
+                        ":status" => $stream['channel']['status'],
+                        ":viewers" => $stream['viewers'],
+                        ":preview" => str_replace("http://","https://", $stream['preview']['small'])
+                    )
+                );
+
+            }
+
+            parent::commitTransaction();
+
+        } catch (PDOException $e) {
+            parent::rollbackTransaction();
+            throw $e;
+        }
+    }
+
+    public function insert_new_day($dayId, $date) {
+
+        $sql = "INSERT IGNORE INTO throne_dates(`dayId`, `date`) VALUES(:dayId, :day)";
+
+        $aov = array(
+            ":dayId" => $dayId,
+            ":day" => $date,
+        );
+
+        try {
+
+            parent::executePreparedStatement(
+                parent::makePreparedStatement($sql), $aov
+            );
+
+        } catch (PDOException $e) {
+            throw $e;
+        }
+
+    }
+
+    public function find_hackers() {
+
+        $sql = "SELECT `steamid` FROM throne_players WHERE suspected_hacker = 1";
+
+        try {
+
+            $res = parent::executeStatement(parent::makePreparedStatement($sql));
+
+            return $res->fetchAll();
+
+        } catch (PDOException $e) {
+            throw $e;
+        }
+
+    }
+
+    public function find_hidden_players($dayId) {
+
+        $sql = "SELECT `steamId` FROM throne_scores WHERE hidden = 1 AND dayId = :dayId";
+
+        $aov = array(":dayId" => $dayId);
+
+        try {
+
+            $res = parent::executePreparedStatement(
+                parent::makePreparedStatement($sql), $aov
+            );
+
+            return $res->fetchAll();
+
+        } catch (PDOException $e) {
+            throw $e;
+        }
+
+    }
+
     public function update_alltime_leaderboard() {
         try {
 
