@@ -32,31 +32,26 @@ class Score {
      */
     public function __construct($data) {
         /**
-         * @var PDO $db
+         * @var ThroneBase $db
          */
-        $db = Application::$db;
+        $db = Application::getDatabase();
+
+        $score = array();
 
         //If a hash was provided
         if (isset($data["hash"])) {
 
             //Our job is to get the score that hash corresponds to
             try {
-                $stmt = $db->prepare(
-                    "SELECT * FROM `throne_scores`
-                      LEFT JOIN `throne_dates` ON `throne_dates`.dayId = `throne_scores`.dayId
-                    WHERE `hash` = :hash"
-                );
-                $stmt->execute(array(':hash' => $data["hash"]));
-                $result = $stmt->fetchAll();
+                $score = $db->get_single_score($data['hash']);
             } catch (Exception $e) {
                 die ("Error reading score: " . $e->getMessage());
             }
 
             //And, now we have that score, we can construct a corresponding player object
             // and shove the data we initially got into a 'raw' hiding place apparently
-            $data = $result[0];
-            $data["player"] = new Player(array("search" => $data["steamId"]));
-            $data["raw"] = $data;
+            $score["player"] = new Player(array("search" => $score["steamId"]));
+            $data["raw"] = $score;
 
         }
 
@@ -65,25 +60,25 @@ class Score {
         //
         //Either way, now we have the data, we build it into a score object for use with
         // the website
-        $this->player = $data["player"];
+        $this->player = $score["player"];
 
-        if (isset($data["percentile"]))
-            $this->percentile = $data["percentile"];
+        if (isset($score["percentile"]))
+            $this->percentile = $score["percentile"];
 
-        $this->score = $data["score"];
-        $this->rank = $data["rank"];
-        $this->hash = $data["raw"]["hash"];
-        $this->hidden = $data["hidden"];
+        $this->score = $score["score"];
+        $this->rank = $score["rank"];
+        $this->hash = $score["raw"]["hash"];
+        $this->hidden = $score["hidden"];
 
-        if (isset($data["raw"])) {
-            $this->raw = $data["raw"];
+        if (isset($score["raw"])) {
+            $this->raw = $score["raw"];
         }
 
-        if ($data['first_created'] == "0000-00-00 00:00:00") {
-            $data['first_created'] = "n/a";
+        if ($score['first_created'] == "0000-00-00 00:00:00") {
+            $score['first_created'] = "n/a";
         }
 
-        $this->first_created = $data["first_created"];
+        $this->first_created = $score["first_created"];
 
     }
 

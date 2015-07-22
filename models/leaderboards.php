@@ -47,6 +47,15 @@ class Leaderboard {
 
     }
 
+    public function generate_day_id($date) {
+        //If the caller provided a pure number, that means that they want a leaderboard
+        // given definition by the offset of the days from today
+        if (is_int($date)) {
+            return $dayId = $this->db->get_day_id_from_offset($date);
+        }
+        return $this->db->get_day_id_from_date($date);
+    }
+
     /**
      * Creates a leaderboard based on either a date in YYYY-MM-DD format or an
      * offset from today's date, returning the daily scores for that day either
@@ -65,26 +74,10 @@ class Leaderboard {
      */
     public function create_global($date, $order_by = "rank", $direction = "ASC", $start = 0, $length = 30) {
 
-        //If the caller provided a pure number, that means that they want a leaderboard
-        // given definition by the offset of the days from today
-        if (is_int($date)) {
+        $dayId = $this->generate_day_id($date);
 
-            //We do this by performing some slight trickery that could perhaps backfire
-            // if one days leaderboards went down spectacularly on Steam (I dunno, I just
-            // know that there are ways that this can break)
-            $leaderboard = $this->db->query(
-                "SELECT * FROM throne_dates ORDER BY dayId DESC"
-            );
-            $result = $leaderboard->fetchAll();
-
-            //The ID is currently unused (so I have no idea why it is here (unless it was
-            // originally planned to be an if...else statement which would return $dateId
-            // regardless, which would have been an alternate parameter value to the
-            // ->make_leaderboard() $date parameter)
-            $dateId = $result[$date]['dayId'];
-            $date = $result[$date]['date'];
-
-        }
+        //TODO: Cascade the change of dayId instead of date being used (because why the heck
+        // would you use date instead of an id?)
 
         //Otherwise (and this is so very sketchy) we assume that the date we've been given
         // is completely valid and is the defined date. We then proceed to not do any
@@ -94,15 +87,10 @@ class Leaderboard {
         //Note: Perform validation on the given date before we just shove it straight into
         // the query
         $this->date = $date;
-        $stats = $this->db->query(
-            "SELECT COUNT(*) AS runcount, AVG(score) AS avgscore
-              FROM throne_scores
-              LEFT JOIN throne_dates ON throne_scores.dayId = throne_dates.dayId
-              WHERE `date` = '" . $date . "'");
-        $this->global_stats = $stats->fetchAll()[0];
+        $this->global_stats = $this->db->get_global_statistics($dayId);
 
         //Return an instance of this leaderboard to the caller
-        return $this->make_leaderboard("date", $date, $order_by, $direction, $start, $length);
+        return $this->make_leaderboard("date", $dayId, $order_by, $direction, $start, $length);
 
     }
 
@@ -119,12 +107,14 @@ class Leaderboard {
      */
     public function create_player($steamid, $order_by = "date", $direction = "DESC",
                                   $start = 0, $length = 0, $date = -1) {
+        $dayId = $this->generate_day_id($date);
+
         //... Okay, this is incredibly shifty and bodgy; the very much hardcoded table
         // means that this is going to suffer in terms of portability (should the need
         // arise)
         return $this->make_leaderboard(
             "throne_scores`.`steamid", $steamid, $order_by,
-            $direction, $start, $length, $date
+            $direction, $start, $length, $dayId
         );
     }
 
@@ -137,6 +127,8 @@ class Leaderboard {
      * @return array
      */
     public function to_array($start = 0, $length = -1) {
+
+        //TODO: Actually check that we have any scores to shove into an array first
 
         //Start with an empty array
         $array_scores = array();
@@ -220,58 +212,25 @@ class Leaderboard {
      *  location provided above)
      * @param int $date Another unsafe variable. It is used for narrowing down the
      *  leaderboard to specific days if necessary
+     * Note: This should be altered to only use a pure integer instead of... well, not.
      *
      * @return Leaderboard
      * Note: This is stupid. This is OO, so we're passing back a reference to this object
      *  instead of a copy. This means that the user now has two references to this exact,
      *  class and a change with one reference does it to the other. There's no point in
      *  even having it here if that's intentional.
+     *
+     * After analysing the code a bit further, I'm a bit more perplexed. Nothing truly
+     * substantial is ever done with the returned reference, as, in all instances found,
+     * we immediately send it through the to_array() method above (or below, can't remember),
+     * which kinda means that the whole thing is somewhat jacked in the interest in saving
+     * one line of code per use.
      */
-    private function make_leaderboard($where, $condition, $order_by, $direction, $start = 0, $len = 0, $date = -1) {
+    private function make_leaderboard($where, $condition, $order_by, $direction, $start = 0, $len = 0, $dateId = -1) {
 
-        //Work out if we need a limit on this thing
-        if ($len > 0) {
-            $limit = "LIMIT $start, $len";
-        } else {
-            $limit = "";
-        }
-
-        //Then ask if we're being asked to make a narrow or wide search (with regards to
-        // time anyway)
-        if ($date > -1) {
-            $leaderboard = $this->db->query('SELECT * FROM throne_dates ORDER BY dayId DESC');
-            $result = $leaderboard->fetchAll();
-            $date_today = $result[$date]['date'];
-            $date_query = "AND throne_dates.date = '" . $date_today . "'";
-        } else {
-            $date_query = "";
-        }
-
-        try {
-            //This query is in possession of several orders of sketch
-            $query = $this->db->prepare(
-                "SELECT * FROM `throne_scores`
-                LEFT JOIN throne_dates ON throne_scores.dayId = throne_dates.dayId
-                LEFT JOIN throne_players ON throne_scores.steamId = throne_players.steamid
-                LEFT JOIN (
-                  (SELECT COUNT(*) AS wins, steamId FROM throne_scores
-                    WHERE rank = 1 GROUP BY steamId) AS w) ON w.steamId = throne_scores.steamId
-                LEFT JOIN (
-                    SELECT dayId AS d, COUNT(*) AS runs FROM throne_scores
-                    GROUP BY dayId) x ON x.d = throne_scores.dayId
-                WHERE `{$where}` = :cnd
-                $date_query
-                ORDER BY `{$order_by}` {$direction} {$limit}"
-            );
-
-            //Still... apparently we're going to try it and hope that nothing breaks
-            $query->execute(array(":cnd" => $condition));
-            $entries = $query->fetchAll();
-
-        } catch (Exception $e) {
-            //Or die trying... that's an acceptable path too
-            die ("Error fetching leaderboard: " . $e->getMessage());
-        }
+        $entries = $this->db->generate_leaderboard(
+            $where, $condition, $order_by, $direction, $start, $len, $dateId
+        );
 
         $scores = array();
 

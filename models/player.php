@@ -21,7 +21,7 @@ class Player {
     public $steamid, $name, $avatar, $twitch, $avatar_medium, $suspected_hacker, $admin, $raw, $rank;
 
     /**
-     * @var PDO $db
+     * @var ThroneBase $db
      */
     private $db;
 
@@ -39,30 +39,24 @@ class Player {
     public function __construct($data) {
 
         //Get the database instance (yep, it is used in the code, I know... amazing)
-        $this->db = Application::$db;
+        $this->db = Application::getDatabase();
 
         //And check that the search term has been set
         if (isset($data["search"])) {
 
             //Now, since it is, search for the provided term
-            $stmt = $this->db->prepare(
-                "SELECT * FROM `throne_players`
-                  LEFT JOIN (
-                    (SELECT COUNT(*) AS wins, steamId FROM throne_scores
-                    WHERE rank = 1 GROUP BY steamId)
-                  AS w) ON w.steamId = throne_players.steamid
-                WHERE throne_players.steamid = :steamid"
-            );
-
-            $stmt->execute(array(':steamid' => $data["search"]));
-            $data = $stmt->fetchAll();
+            $player = $this->db->get_user($data['search']);
 
             //And, if no data was returned (the first row doesn't exist), we bin
             // everything
-            if (!isset($data[0])) {
+            if (!isset($player)) {
                 //But not without first setting this to false for some unknown reason.
                 //Seriously... Why is this done? It's out of scope for that variable to
                 // go back up the chain, so what is it doing?
+                //
+                //Considering that we return immediately afterwards, this variable is not
+                // used in our current scope, and, for the life of me, I can't see where
+                // it is attempted to be used out of scope
                 $data["steamid"] = false;
                 return;
             } else {
@@ -75,6 +69,8 @@ class Player {
 
             $data["raw"] = $data;
         }
+
+        //For the time being, I'm not jumping anywhere near this bucket of worms...
 
         //And, without an else statement, simply assume that there's a [steamid] option in the array
         $this->steamid = $data["steamid"];
@@ -120,25 +116,15 @@ class Player {
      * @return int
      */
     public function get_rank() {
-        $stmt = $this->db->prepare(
-            "SELECT d.*, c.ranks FROM (
-              SELECT score, @rank:=@rank+1 ranks FROM (
-                SELECT DISTINCT score FROM throne_alltime a
-                ORDER BY score DESC
-              ) t, (SELECT @rank:= 0) r
-            ) c INNER JOIN throne_alltime d ON c.score = d.score
-            WHERE d.steamid = :steamid"
-        );
-        $stmt->execute(array(':steamid' => $this->steamid));
-        if ($stmt->rowCount() != 1) {
-            return -1;
-        }
-        $data = $stmt->fetchAll()[0];
-        return $data["ranks"];
+        return $this->db->get_alltime_rank($this->steamid);
     }
 
     /**
      * Get the ranking of this player for today's daily run for the Nuclear Throne
+     *
+     * As an aside, this seems somewhat - uh... well, like overkill for what it is.
+     * We're creating a whole leaderboard (of length one admittedly, but it's still
+     * somewhat odd.
      *
      * @return int
      */
@@ -159,21 +145,14 @@ class Player {
      * @return bool
      */
     public function set_twitch($twitch) {
+        //If their Twitch account is already set to what they are trying to
+        // change it to, then we don't need to do anything (congrats to us
+        // anyway though)
         if ($this->twitch == $twitch) {
             return true;
         }
-        $stmt = $this->db->prepare(
-            "UPDATE throne_players SET twitch = :twitch WHERE steamid = :steamid"
-        );
-        $stmt->execute(array(":twitch" => $twitch, ":steamid" => $this->steamid));
 
-        //Okay, we've done that, now let's see if it worked...
-
-        if ($stmt->rowCount() != 1) {
-            return false;
-        } else {
-            return true;
-        }
+        return $this->db->update_twitch($this->steamid, $twitch);
 
     }
 

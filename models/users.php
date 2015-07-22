@@ -40,35 +40,7 @@ function get_data($url) {
  * @return int
  */
 function check_your_privilege($steamid) {
-
-    //Another instance of database instantiation... Why... seriously. All of these
-    // pages are redirects of the index, and the ones that aren't don't even use the
-    // central database position that is there? wtf?
-    global $db_username, $db_password, $db_location, $db_name;
-    $db = new PDO(sprintf('mysql:host=%s;dbname=%s;charset=utf8', $db_location, $db_name),
-        $db_username, $db_password,
-        array(PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION)
-    );
-
-    //Get the (whole?) row associated with the person we're looking for
-    $stmt = $db->prepare(
-        "SELECT * FROM throne_players WHERE steamid = :steamid"
-    );
-    $stmt->execute(array(
-        ':steamid' => $steamid
-    ));
-
-    //If no-one was returned, then rather obviously, no-one here is an admin
-    if ($stmt->rowCount() === 0) {
-        return 0;
-    } //$stmt->rowCount() === 0
-
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $player = $rows[0];
-
-    //Otherwise, return whether the user is an admin or not
-    return $player['admin'];
-
+    return Application::getDatabase()->check_user_is_admin($steamid);
 }
 
 /**
@@ -81,26 +53,7 @@ function check_your_privilege($steamid) {
  * Note: Should probably be a boolean value
  */
 function hide_score($hash, $state = 1) {
-
-    //? We don't need no central database ?
-    //(Sung to the tune of Pink Floyd's Another Brick in the Wall)
-    global $db_username, $db_password, $db_location, $db_name;
-    $db = new PDO(sprintf('mysql:host=%s;dbname=%s;charset=utf8', $db_location, $db_name),
-        $db_username, $db_password,
-        array(PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION)
-    );
-
-    //Update the state
-    $stmt = $db->prepare(
-        "UPDATE throne_scores SET hidden = :state WHERE hash = :hash"
-    );
-    $stmt->execute(array(
-        ':hash' => $hash,
-        ':state' => $state
-    ));
-
-    //And assume it worked (I guess...)
-
+    Application::getDatabase()->set_score_hidden($hash, $state);
 }
 
 /**
@@ -112,25 +65,7 @@ function hide_score($hash, $state = 1) {
  * @param int $state 1 if we suspect them, 0 if we absolve them of all guilt
  */
 function mark_hacker($user, $state = 1) {
-
-    //See previous remarks about multiple database instantiations
-    global $db_username, $db_password, $db_location, $db_name;
-    $db = new PDO(sprintf('mysql:host=%s;dbname=%s;charset=utf8', $db_location, $db_name),
-        $db_username, $db_password,
-        array(PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION)
-    );
-
-    //All this does is update a row with the state
-    $stmt = $db->prepare(
-        "UPDATE throne_players SET suspected_hacker = :state WHERE steamid = :user"
-    );
-    $stmt->execute(array(
-        ':user' => $user,
-        ':state' => $state
-    ));
-
-    //And, again, we assume it worked
-
+    Application::getDatabase()->mark_user_hacker($user,$state);
 }
 
 /**
@@ -143,12 +78,7 @@ function mark_hacker($user, $state = 1) {
  */
 function update_profile($userId) {
 
-    //More duplication, Princess Fluffybutt?
-    global $db_username, $db_password, $db_location, $db_name, $steam_apikey;
-    $db = new PDO(sprintf('mysql:host=%s;dbname=%s;charset=utf8', $db_location, $db_name),
-        $db_username, $db_password,
-        array(PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION)
-    );
+    global $steam_apikey;
 
     //We need to ping the Steam WebAPI for these details, so let's do so
     $jsonUserData = get_data(
@@ -162,23 +92,11 @@ function update_profile($userId) {
     $user = json_decode($jsonUserData, true);
 
     //Now we have to update the profile of that user with these details (even if they're identical)
+    //TODO: Research is an update faster than a check of two values?
     try {
-        /**
-         * @var PDOStatement $stmt
-         */
-        $stmt = $db->prepare(
-            "UPDATE throne_players SET
-              name = :name,
-              avatar = :avatar,
-              last_updated = NOW()
-            WHERE steamid = :steamid"
-        );
-        $stmt->execute(
-            array(
-                ':steamid' => $userId,
-                ':name' => $user["response"]["players"][0]["personaname"],
-                ':avatar' => $user["response"]["players"][0]["avatar"]
-            )
+        Application::getDatabase()->update_user( $userId,
+            $user["response"]["players"][0]["personaname"],
+            $user["response"]["players"][0]["avatar"]
         );
     } catch (Exception $e) {
         die($e->getMessage());

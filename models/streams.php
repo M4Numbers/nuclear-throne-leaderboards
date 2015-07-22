@@ -7,7 +7,7 @@
 class Streams {
 
     /**
-     * @var PDO $db Yet Another instance of the database.
+     * @var ThroneBase $db
      */
     private $db;
 
@@ -27,10 +27,8 @@ class Streams {
      *  all in the statement below)
      */
     public function __construct($limit = 3) {
-        $this->db = Application::$db;
-        $this->streams = $this->db->query(
-            "SELECT * FROM throne_streams ORDER BY viewers DESC LIMIT 0,3"
-        )->fetchAll();
+        $this->db = Application::getDatabase();
+        $this->streams = $this->db->get_streams();
     }
 
 }
