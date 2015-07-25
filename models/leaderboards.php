@@ -47,11 +47,11 @@ class Leaderboard {
 
     }
 
-    public function generate_day_id($date) {
+    public function generate_day_info($date) {
         //If the caller provided a pure number, that means that they want a leaderboard
         // given definition by the offset of the days from today
         if (is_int($date)) {
-            return $dayId = $this->db->get_day_id_from_offset($date);
+            return $this->db->get_day_id_from_offset($date);
         }
         return $this->db->get_day_id_from_date($date);
     }
@@ -74,7 +74,7 @@ class Leaderboard {
      */
     public function create_global($date, $order_by = "rank", $direction = "ASC", $start = 0, $length = 30) {
 
-        $dayId = $this->generate_day_id($date);
+        $day = $this->generate_day_info($date);
 
         //TODO: Cascade the change of dayId instead of date being used (because why the heck
         // would you use date instead of an id?)
@@ -86,11 +86,11 @@ class Leaderboard {
         //
         //Note: Perform validation on the given date before we just shove it straight into
         // the query
-        $this->date = $date;
-        $this->global_stats = $this->db->get_global_statistics($dayId);
+        $this->date = $day['date'];
+        $this->global_stats = $this->db->get_global_statistics($day['dayId']);
 
         //Return an instance of this leaderboard to the caller
-        return $this->make_leaderboard("date", $dayId, $order_by, $direction, $start, $length);
+        return $this->make_leaderboard("throne_scores.dayId", $day['dayId'], $order_by, $direction, $start, $length);
 
     }
 
@@ -107,13 +107,13 @@ class Leaderboard {
      */
     public function create_player($steamid, $order_by = "date", $direction = "DESC",
                                   $start = 0, $length = 0, $date = -1) {
-        $dayId = $this->generate_day_id($date);
+        $dayId = $this->generate_day_info($date)['dayId'];
 
         //... Okay, this is incredibly shifty and bodgy; the very much hardcoded table
         // means that this is going to suffer in terms of portability (should the need
         // arise)
         return $this->make_leaderboard(
-            "throne_scores`.`steamid", $steamid, $order_by,
+            "throne_scores.steamid", $steamid, $order_by,
             $direction, $start, $length, $dayId
         );
     }

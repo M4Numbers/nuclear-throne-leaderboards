@@ -47,6 +47,8 @@ class Player {
             //Now, since it is, search for the provided term
             $player = $this->db->get_user($data['search']);
 
+            var_dump($player);
+
             //And, if no data was returned (the first row doesn't exist), we bin
             // everything
             if (!isset($player)) {
@@ -61,13 +63,13 @@ class Player {
                 return;
             } else {
                 //Otherwise, set the data
-                $data = $data[0];
+                $data = $player;
                 //Then perform recursion apparently...
                 //Wat.
-                $data["steamid"] = $data[0];
+                $data["steamid"] = $player['steamid'];
             }
 
-            $data["raw"] = $data;
+            $data["raw"] = $player;
         }
 
         //For the time being, I'm not jumping anywhere near this bucket of worms...

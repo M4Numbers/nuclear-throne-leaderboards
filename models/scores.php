@@ -28,22 +28,22 @@ class Score {
      * {"hash" => $score_hash} to retrieve that score and its information. Otherwise, you can,
      * and I quote: 'pass an array with data provided by the table.'
      *
-     * @param array $data Some mystical data that does something
+     * @param array $score Some mystical data that does something
      */
-    public function __construct($data) {
+    public function __construct($score) {
         /**
          * @var ThroneBase $db
          */
         $db = Application::getDatabase();
 
-        $score = array();
+//        $score = array();
 
         //If a hash was provided
-        if (isset($data["hash"])) {
+        if (isset($score["hash"])) {
 
             //Our job is to get the score that hash corresponds to
             try {
-                $score = $db->get_single_score($data['hash']);
+                $score = $db->get_single_score($score['hash']);
             } catch (Exception $e) {
                 die ("Error reading score: " . $e->getMessage());
             }
@@ -51,7 +51,7 @@ class Score {
             //And, now we have that score, we can construct a corresponding player object
             // and shove the data we initially got into a 'raw' hiding place apparently
             $score["player"] = new Player(array("search" => $score["steamId"]));
-            $data["raw"] = $score;
+            $score["raw"] = $score;
 
         }
 

@@ -20,6 +20,7 @@ $start = $time;
 // Bugbears found living under the mattress?  Unknown.
 
 require "config.php";
+require_once "config/config.php";
 
 //So, it occurs to me that sometimes, having these errors is never wanted, even
 // in a development setting (i.e. when this page is being polled for json stats)
@@ -67,7 +68,7 @@ if (!$openid->mode) {
         $_SESSION["steamid"] = $matches[1];
         $url = sprintf(
             "http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
-            $steam_apikey, $matches[1]
+            STEAMAPI, $matches[1]
         );
 
         //Set up our curl request to Steam
@@ -114,7 +115,7 @@ if (isset($_COOKIE["authtoken"]) && !isset($_SESSION["steamid"])) {
         $_SESSION["steamid"] = $steamid_login;
         $url = sprintf(
             "http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
-            $steam_apikey, $steamid_login
+            STEAMAPI, $steamid_login
         );
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);

@@ -57,7 +57,7 @@ class CentralDatabase {
 
         //Connect using the information we've been supplied
         // in the constructor
-        $dsn = sprintf("mysql:dbname=%s;host=%s;charset=utf8;", $database, DATAHOST);
+        $dsn = sprintf("mysql:dbname=%s;host=%s;charset=utf8;", DATABASE, DATAHOST);
 
         try {
 

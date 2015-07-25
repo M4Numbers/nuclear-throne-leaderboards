@@ -78,13 +78,11 @@ function mark_hacker($user, $state = 1) {
  */
 function update_profile($userId) {
 
-    global $steam_apikey;
-
     //We need to ping the Steam WebAPI for these details, so let's do so
     $jsonUserData = get_data(
         sprintf(
             "http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
-            $steam_apikey, $userId)
+            STEAMAPI, $userId)
     );
 
     //The data we get back has been jsonified (note: should probably specify this in the url to

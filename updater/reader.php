@@ -44,7 +44,7 @@ date_default_timezone_set("UTC");
  * @param int $leaderboardId
  */
 function update_leaderboard($leaderboardId = -1) {
-    global $twitter_settings, $steam_apikey;
+    global $twitter_settings;
 
     $db = Application::getDatabase();
     $leaderboardDate = 0;
@@ -217,7 +217,7 @@ function update_leaderboard($leaderboardId = -1) {
             $jsonUserData = get_data(
                 sprintf(
                     "http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
-                    $steam_apikey, $score['steamID']
+                    STEAMAPI, $score['steamID']
                 )
             );
             $user = json_decode($jsonUserData, true);
@@ -245,7 +245,6 @@ function update_leaderboard($leaderboardId = -1) {
 function update_steam_profiles() {
 
     //More databases!
-    global $steam_apikey;
     $db = Application::getDatabase();
 
     //Lift the time limit on php scripts: this is going to take a while...
@@ -260,7 +259,7 @@ function update_steam_profiles() {
 
     try {
 
-        $db->update_profiles($profiles, $steam_apikey);
+        $db->update_profiles($profiles, STEAMAPI, 'get_data');
 
     } catch (PDOException $e) {
         echo $e->getMessage();

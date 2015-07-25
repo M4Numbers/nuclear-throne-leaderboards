@@ -154,7 +154,7 @@ class ThroneBase extends CentralDatabase {
 
         $aov = array(":chosen" => $date);
 
-        $sql = "SELECT `dayId` FROM `throne_dates`
+        $sql = "SELECT `dayId`, `date` FROM `throne_dates`
                 WHERE `date`=:chosen";
 
         try {
@@ -163,8 +163,7 @@ class ThroneBase extends CentralDatabase {
             );
 
             if ($res->rowCount() > 0) {
-                $row = $res->fetch();
-                return $row['dayId'];
+                return $res->fetch();
             }
             return 0;
         } catch (PDOException $e) {
@@ -176,7 +175,7 @@ class ThroneBase extends CentralDatabase {
     public function get_day_id_from_offset($offset) {
         $offset++;
 
-        $sql = "SELECT `dayId` FROM `throne_dates`
+        $sql = "SELECT `dayId`, `date` FROM `throne_dates`
                 ORDER BY `dayId` DESC LIMIT {$offset}";
 
         try {
@@ -187,7 +186,7 @@ class ThroneBase extends CentralDatabase {
 
             $row = $res->fetchAll();
 
-            return $row[$offset-1]['dayId'];
+            return $row[$offset-1];
 
         } catch (PDOException $e) {
             throw $e;
@@ -243,7 +242,7 @@ class ThroneBase extends CentralDatabase {
                 LEFT JOIN (
                     SELECT dayId AS d, COUNT(*) AS runs FROM throne_scores
                     GROUP BY dayId) x ON x.d = throne_scores.dayId
-                WHERE `{$where}` = :cnd
+                WHERE {$where} = :cnd
                 $date_query
                 ORDER BY `{$order_by}` {$direction} {$limit}";
 
@@ -578,7 +577,7 @@ class ThroneBase extends CentralDatabase {
      * Start Crontab Methods
      */
 
-    public function update_profiles($profiles, $steam_apikey, callable $curler = "get_data") {
+    public function update_profiles($profiles, $steam_apikey, callable $curler) {
 
         //TODO: Cut the logging from this so it's purely functional
 
