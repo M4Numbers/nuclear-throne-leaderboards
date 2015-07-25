@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS `throne_players` (
   `avatar` varchar(255) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL,
   `twitch` varchar(255) NOT NULL,
   `suspected_hacker` tinyint(1) NOT NULL,
+  `donated` tinyint(1) NOT NULL DEFAULT 0,
   `last_updated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `admin` tinyint(4) DEFAULT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;

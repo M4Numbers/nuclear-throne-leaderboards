@@ -17,8 +17,9 @@ class Player {
      * @var int $admin
      * @var array $raw
      * @var int $rank
+     * @var int $donated
      */
-    public $steamid, $name, $avatar, $twitch, $avatar_medium, $suspected_hacker, $admin, $raw, $rank;
+    public $steamid, $name, $avatar, $twitch, $avatar_medium, $suspected_hacker, $admin, $raw, $rank, $donated;
 
     /**
      * @var ThroneBase $db
@@ -104,6 +105,7 @@ class Player {
         @$this->rank = $data["rank"]; // I don't know how this works, but it works.
         $this->admin = $data["admin"];
         $this->twitch = $data["twitch"];
+        $this->donated = $data["donated"];
         if (isset($data["raw"])) {
             //Raw is apparently optional (not too sure why)
             $this->raw = $data["raw"];
@@ -174,6 +176,7 @@ class Player {
             "admin" => $this->admin,
             "rank" => $this->rank,
             "twitch" => $this->twitch,
+            "donated" => $this->donated,
             "raw" => $this->raw
         );
     }

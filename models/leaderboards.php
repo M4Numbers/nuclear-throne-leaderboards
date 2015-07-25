@@ -280,6 +280,7 @@ class Leaderboard {
                 "suspected_hacker" => $entry["suspected_hacker"],
                 "admin" => $entry["admin"],
                 "twitch" => $entry["twitch"],
+                "donated" => $entry["donated"],
                 "raw" => $meta));
 
             $scores[] = new Score(array("player" => $player,
@@ -298,6 +299,4 @@ class Leaderboard {
         return $this;
 
     }
-
 }
-
