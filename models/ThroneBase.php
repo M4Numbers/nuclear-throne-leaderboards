@@ -531,8 +531,235 @@ class ThroneBase extends CentralDatabase {
      */
 
     /**
+     * Start Twitter Methods
+     */
+
+    public function get_latest_day_id() {
+
+        $sql = "SELECT * FROM throne_dates ORDER BY dayId DESC LIMIT 0,1";
+
+        try {
+
+            $res = parent::executeStatement(parent::makePreparedStatement($sql));
+
+            return $res->fetch();
+
+        } catch (PDOException $e) {
+            throw $e;
+        }
+
+    }
+
+    public function find_top_player_for_day($dayId) {
+        $sql = "SELECT throne_scores.score, throne_players.name FROM throne_scores
+                LEFT JOIN throne_players ON throne_players.steamid = throne_scores.steamId
+                WHERE throne_scores.dayId = ':dayId' ORDER BY rank ASC LIMIT 0,1";
+
+        $aov = array(":dayId" => $dayId);
+
+        try {
+
+            $res = parent::executePreparedStatement(
+                parent::makePreparedStatement($sql), $aov
+            );
+
+            return $res->fetch();
+
+        } catch (PDOException $e) {
+            throw $e;
+        }
+    }
+
+    /**
+     * End Twitter Methods
+     */
+
+    /**
      * Start Crontab Methods
      */
+
+    public function update_profiles($profiles, $steam_apikey, callable $curler = "get_data") {
+
+        //TODO: Cut the logging from this so it's purely functional
+
+        $t = count($profiles);
+        // Logging.
+        echo($t . " profiles to update. \n");
+
+        //A counting variable which is necessary to make sure that we don't overstay our welcome on Steam
+        $c = 0;
+        try {
+
+            // Prepare for a major alteration
+            parent::beginTransaction();
+
+            $insert = parent::makePreparedStatement(
+                "INSERT INTO throne_players(steamid, name, avatar)
+                VALUES(:steamid, :name, :avatar)
+                ON DUPLICATE KEY UPDATE name=VALUES(name), avatar=VALUES(avatar), last_updated=NOW();"
+            );
+
+            foreach ($profiles as $row) {
+
+                $jsonUserData = "";
+
+                //For each player, we get their profile page and save their name and a link
+                // to their avatar.
+                try {
+
+                    $jsonUserData = call_user_func($curler,
+                        sprintf(
+                            "http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
+                            $steam_apikey, $row['steamId']
+                        )
+                    );
+
+                    //Decode the data
+                    $user = json_decode($jsonUserData, true);
+
+                    //And insert the person straight in
+                    parent::executePreparedStatement($insert,
+                        array(
+                            ":steamid" => $row['steamId'],
+                            ":name" => $user["response"]["players"][0]["personaname"],
+                            ":avatar" => $user["response"]["players"][0]["avatar"]
+                        )
+                    );
+
+                    // Log the update.
+                    printf(
+                        "[%d/%d] Updated %s as %s\n",
+                        $c, $t, $row['steamId'], $user["response"]["players"][0]["personaname"]
+                    );
+
+                } catch (Exception $e) {
+
+                    //Print an amount of debug
+
+                    printf("----- Profile Update Failed -----\n");
+
+                    printf(
+                        "[%d/%d]   Failed to update %s due to %s\n",
+                        $c, $t, $row['steamId'], $e->getMessage()
+                    );
+                    printf(
+                        "[%d/%d]   Pulled from: http://api.steampowered.com/ISteamUser/GetPlayerSummaries".
+                        "/v0002/?key=%s&steamids=%s\n", $c, $t, $steam_apikey, $row['steamId']
+                    );
+                    printf(
+                        "[%d/%d]   Result: ", $c, $t
+                    );
+                    var_dump($jsonUserData);
+
+                    printf("\n----- Profile Debug Completed -----\n");
+
+                }
+
+                //Wait for 0.2 seconds so that we don't piss off Lord GabeN and mistakenly
+                // DDoS Steam.
+                usleep(200000);
+                $c = $c + 1;
+
+                // I have to do this.
+                //I assume that this is done because of the time that it must be taking by this
+                // point and the number of requests that have been fired off to Steam. We need
+                // to stop before we go too far
+                if ($c === 500) {
+                    break;
+                }
+
+            }
+
+            //Commit all those changes we've made
+            parent::commitTransaction();
+
+        } catch (PDOException $e) {
+            parent::rollbackTransaction();
+            throw $e;
+
+        }
+    }
+
+    public function get_updating_profiles() {
+
+        $sql = "SELECT DISTINCT throne_scores.steamId FROM throne_scores
+                  LEFT JOIN throne_players ON throne_scores.steamId = throne_players.steamid
+                WHERE DATEDIFF(NOW(), throne_scores.last_updated) < 5
+                  AND
+                    (DATEDIFF(NOW(), throne_players.last_updated) > 1
+                      OR throne_players.last_updated IS NULL)";
+
+        try {
+
+            $res = parent::executeStatement(parent::makePreparedStatement($sql));
+            return $res->fetchAll();
+
+        } catch (PDOException $e) {
+            throw $e;
+        }
+
+    }
+
+    public function update_all_scores($scores, $banned) {
+
+        //Mark the number one rank
+        $rank = 1;
+        //And the lowest rank currently possible
+        $rank_hax = count($scores) + 1;
+
+        $ret = array();
+
+        try {
+            //Start some transaction management for a minute so we can roll out everything
+            // as a single big change as opposed to many little ones
+            parent::beginTransaction();
+
+            $insert = parent::makePreparedStatement(
+                "INSERT INTO throne_scores(hash, dayId, steamId, score, rank, hidden, first_created)
+                VALUES(:hash, :dayId,:steamID,:score,:rank,:hidden,NOW())
+                ON DUPLICATE KEY UPDATE rank=VALUES(rank), score=VALUES(score), hidden=VALUES(hidden);"
+            );
+
+            foreach ($scores as $score) {
+
+                $b = (array_search($score['steamID'], $banned) === false);
+
+                if ($b && ($rank == 1)) {
+                    $ret = $score;
+                }
+
+                // Insert data into the database
+                parent::executePreparedStatement($insert,
+                    array(
+                        ":hash" => $score['hash'],
+                        ":dayId" => $score['dayId'],
+                        ":steamID" => $score['steamID'],
+                        ":score" => $score['score'],
+                        ":rank" => ($b) ? $rank : $rank_hax,
+                        ":hidden" => ($b) ? 0 : 1,
+                    )
+                );
+
+                if ($b) {
+                    //And prop the rank up one more for the next person
+                    $rank += 1;
+                } else {
+                    //And prop the rank up one more for the next hacker
+                    $rank_hax += 1;
+                }
+
+            }
+
+            // Commit our efforts.
+            parent::commitTransaction();
+
+            return $ret;
+
+        } catch (PDOException $e) {
+            parent::rollbackTransaction();
+            throw $e;
+        }
+    }
 
     public function refresh_twitch_streams($streams) {
 

@@ -8,10 +8,13 @@
  * minutes
  */
 
-require("config.php");
+require_once "../config/config.php";
+require_once "../models/CentralDatabase.php";
+require_once "../models/ThroneBase.php";
+require_once "../models/application.php";
 //TODO: Uncomment. This is here because I'm not messing with Twitter for the
 // minute
-//require("codebird.php");
+//require_once "codebird.php";
 
 /**
  * A quick method to shoot off a http request to somewhere from in-house.
@@ -199,100 +202,34 @@ function update_leaderboard($leaderboardId = -1) {
         echo("[DEBUG] Hiding scores by " . $hidden['steamid'] . " today.\n");
     }
 
-    //Mark the number one rank
-    $rank = 1;
-    //And the lowest rank currently possible
-    $rank_hax = count($scores) + 1;
-
     try {
 
-        //Start some transaction management for a minute so we can roll out everything
-        // as a single big change as opposed to many little ones
-        $db->beginTransaction();
+        $score = $db->update_all_scores($scores, $banned);
 
-        foreach ($scores as $score) {
+        /*  TODO: When using Twitter, remove this comment block
+        if ($score["steamID"] != file_get_contents("first.txt") && $score["score"] > 300) {
+            $file = fopen("first.txt", "w");
+            fwrite($file, $score["steamID"]);
+            fclose($file);
+            \Codebird\Codebird::setConsumerKey($twitter_settings["consumer_key"], $twitter_settings["consumer_secret"]);
+            $cb = \Codebird\Codebird::getInstance();
+            $cb->setToken($twitter_settings["oauth_access_token"], $twitter_settings["oauth_access_token_secret"]);
+            $jsonUserData = get_data(
+                sprintf(
+                    "http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
+                    $steam_apikey, $score['steamID']
+                )
+            );
+            $user = json_decode($jsonUserData, true);
+            $username = $user["response"]["players"][0]["personaname"];
+            $params = array(
+                'status' => $username . " has taken the lead with " . $score["score"] . " kills!"
+            );
+            $reply = $cb->statuses_update($params);
+        } */
 
-            /*  I assume that this is more legacy code. Leaving it along for the moment
-             *   if ($rank == 1) {
-                if ($score["steamID"] != file_get_contents("first.txt") && $score["score"] > 300) {
-                  $file = fopen("first.txt", "w");
-                  fwrite($file, $score["steamID"]);
-                  fclose($file);
-
-                  \Codebird\Codebird::setConsumerKey($twitter_settings["consumer_key"], $twitter_settings["consumer_secret"]);
-                  $cb = \Codebird\Codebird::getInstance();
-                  $cb->setToken($twitter_settings["oauth_access_token"], $twitter_settings["oauth_access_token_secret"]);
-
-                  $jsonUserData = get_data("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=".$steam_apikey."&steamids=" . $score['steamID']);
-                  $user = json_decode($jsonUserData, true);
-
-                  $username = $user["response"]["players"][0]["personaname"];
-
-                  $params = array(
-                    'status' => $username . " has taken the lead with " . $score["score"] . " kills!"
-                  );
-                  $reply = $cb->statuses_update($params);
-                }
-
-              }*/
-
-            //If this person is not on the list of those currently banned from the leaderboard
-            if (array_search($score['steamID'], $banned) === false) {
-
-                // Prepare the SQL statement
-                $stmt = $db->prepare(
-                    "INSERT INTO throne_scores(hash, dayId, steamId, score, rank, first_created)
-                    VALUES(:hash, :dayId,:steamID,:score,:rank,NOW())
-                    ON DUPLICATE KEY UPDATE rank=VALUES(rank), score=VALUES(score);"
-                );
-
-                // Insert data into the database
-                $stmt->execute(array(
-                    ":hash" => $score['hash'],
-                    ":dayId" => $score['dayId'],
-                    ":steamID" => $score['steamID'],
-                    ":score" => $score['score'],
-                    ":rank" => $rank
-                ));
-
-                //And prop the rank up one more for the next person
-                $rank += 1;
-
-            } else {
-
-                //Hackers get their own special rank, so, rather suitably, they get their own
-                // SQL statement too
-                $stmt = $db->prepare(
-                    "INSERT INTO throne_scores(hash, dayId, steamId, score, rank, hidden, first_created)
-                    VALUES(:hash, :dayId,:steamID,:score,:rank,:hidden,NOW())
-                    ON DUPLICATE KEY UPDATE rank=VALUES(rank), score=VALUES(score), hidden=VALUES(hidden);"
-                );
-
-                // Insert data into the database
-                $stmt->execute(array(
-                    ":hash" => $score['hash'],
-                    ":dayId" => $score['dayId'],
-                    ":steamID" => $score['steamID'],
-                    ":score" => $score['score'],
-                    ":rank" => $rank_hax,
-                    ":hidden" => 1
-                ));
-
-                //And prop the rank up one more for the next hacker
-                $rank_hax += 1;
-
-            }
-
-        }
-
-        // Commit our efforts.
-        $db->commit();
-
-    } catch (PDOException $ex) {
-        // Failsafe
-
-        $db->rollBack();
-        echo $ex->getMessage();
+    } catch (PDOException $e) {
+        echo $e->getMessage();
     }
 
     //And say that we've done updating
@@ -308,11 +245,8 @@ function update_leaderboard($leaderboardId = -1) {
 function update_steam_profiles() {
 
     //More databases!
-    global $db_username, $db_password, $db_location, $db_name, $steam_apikey;
-    $db = new PDO(sprintf('mysql:host=%s;dbname=%s;charset=utf8', $db_location, $db_name),
-        $db_username, $db_password,
-        array(PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION)
-    );
+    global $steam_apikey;
+    $db = Application::getDatabase();
 
     //Lift the time limit on php scripts: this is going to take a while...
     set_time_limit(0);
@@ -322,111 +256,14 @@ function update_steam_profiles() {
     // past five days and if they have not been updated in the past day (or
     // at all)
 
-    $result = $db->query(
-        "SELECT DISTINCT throne_scores.steamId FROM throne_scores
-          LEFT JOIN throne_players ON throne_scores.steamId = throne_players.steamid
-        WHERE DATEDIFF(NOW(), throne_scores.last_updated) < 5
-          AND (DATEDIFF(NOW(), throne_players.last_updated) > 1
-            OR throne_players.last_updated IS NULL
-          );"
-    );
+    $profiles = $db->get_updating_profiles();
 
-    $t = $result->rowCount();
-    // Logging.
-    echo($t . " profiles to update. \n");
-
-    //A counting variable which is necessary to make sure that we don't overstay our welcome on Steam
-    $c = 0;
     try {
 
-        // Prepare for a major alteration
-        $db->beginTransaction();
+        $db->update_profiles($profiles, $steam_apikey);
 
-        foreach ($result as $row) {
-
-            $jsonUserData = "";
-
-            //For each player, we get their profile page and save their name and a link
-            // to their avatar.
-            try {
-
-                global $steam_apikey;
-                $jsonUserData = get_data(
-                    sprintf(
-                        "http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
-                        $steam_apikey, $row['steamId']
-                    )
-                );
-
-                //Decode the data
-                $user = json_decode($jsonUserData, true);
-
-                //And insert the person straight in
-                $stmt = $db->prepare(
-                    "INSERT INTO throne_players(steamid, name, avatar)
-                    VALUES(:steamid, :name, :avatar)
-                    ON DUPLICATE KEY UPDATE name=VALUES(name), avatar=VALUES(avatar), last_updated=NOW();"
-                );
-
-                $stmt->execute(array(
-                    ":steamid" => $row['steamId'],
-                    ":name" => $user["response"]["players"][0]["personaname"],
-                    ":avatar" => $user["response"]["players"][0]["avatar"]
-                ));
-
-                // Log the update.
-                printf(
-                    "[%d/%d] Updated %s as %s\n",
-                    $c, $t, $row['steamId'], $user["response"]["players"][0]["personaname"]
-                );
-
-            } catch (Exception $e) {
-
-                //Print an amount of debug
-
-                printf("----- Profile Update Failed -----\n");
-
-                printf(
-                    "[%d/%d]   Failed to update %s due to %s\n",
-                    $c, $t, $row['steamId'], $e->getMessage()
-                );
-                printf(
-                    "[%d/%d]   Pulled from: http://api.steampowered.com/ISteamUser/GetPlayerSummaries".
-                    "/v0002/?key=%s&steamids=%s\n", $c, $t, $steam_apikey, $row['steamId']
-                );
-                printf(
-                    "[%d/%d]   Result: ", $c, $t
-                );
-                var_dump($jsonUserData);
-
-                printf("\n----- Profile Debug Completed -----\n");
-
-            }
-
-            //Wait for 0.2 seconds so that we don't piss off Lord GabeN and mistakenly
-            // DDoS Steam.
-            usleep(200000);
-            $c = $c + 1;
-
-            // I have to do this.
-            //I assume that this is done because of the time that it must be taking by this
-            // point and the number of requests that have been fired off to Steam. We need
-            // to stop before we go too far
-            if ($c === 500) {
-                break;
-            }
-
-        }
-
-        //Commit all those changes we've made
-        $db->commit();
-
-    } catch (PDOException $ex) {
-        // Failsafe
-
-        $db->rollBack();
-        echo $ex->getMessage();
-
+    } catch (PDOException $e) {
+        echo $e->getMessage();
     }
 
 }

@@ -8,7 +8,10 @@
 
 //We require ourselves a config file... Men!
 //TODO: Link in other files that are not currently linked due to file structure
-require "config.php";
+require_once "../config/config.php";
+require_once "../models/CentralDatabase.php";
+require_once "../models/ThroneBase.php";
+require_once "../models/application.php";
 
 // I... um... no.
 if (!isset($db_username)) {
